@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+"""
+A quick and dirty script to generate the columns of partners on the Jolley
+Foundation web site:
+
+    https://jolleyfoundation.org/partnerships/
+
+The input is a CSV file exported from a "jolley foundation partners for web
+site" Numbers document maintained by Tish. The first column should be the
+partner org's name, the second column should be its URL.  All other columns are
+ignored.
+
+The output is three <ul> blocks, one for each column, which should be
+copy/pasted into each of the three columns midway down this Partnerships page:
+
+    https://jolleyfoundation.org/wp-admin/post.php?post=17&action=edit
+
+Usage:
+
+    ./make-partnership-columns input/partners.csv
+"""
+
+import csv
+import fileinput
+
+
+COLUMN_COUNT = 3
+
+
+def main(f, column_count, skip_header=False):
+    reader = csv.reader(f)
+
+    if skip_header:
+        next(reader)
+
+    partners = []
+    for row in reader:
+        org = row[0].strip()
+        url = row[1].strip()
+        partners.append((org, url))
+    partners.sort()
+
+    for column in make_columns(partners, column_count):
+        render_column(column)
+
+
+def make_columns(items, column_count):
+    count = len(items)
+    size, rem = divmod(count, column_count)
+    if rem:
+        size += 1
+    columns = [items[i:i+size] for i in range(0, count, size)]
+
+    # sanity check our column divisions
+    assert len(items) == sum(len(column) for column in columns)
+    assert set(items) == set(item for column in columns for item in column)
+
+    return columns
+
+
+def render_column(items):
+    print('<ul>')
+    for org, url in items:
+        print(f'<li><a href="{url}" target="_blank">{org}</a></li>')
+    print('</ul>\n')
+
+
+if __name__ == '__main__':
+    main(fileinput.input(), COLUMN_COUNT)
